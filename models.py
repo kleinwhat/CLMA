@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
-        
+
+
 class Vgg_16(nn.Module):
     def __init__(self, num_classes=1000):  # num_classes
         super(Vgg_16, self).__init__()
@@ -38,6 +39,7 @@ class Vgg_16(nn.Module):
         pred = self.classifier(x)
         return layers, pred
 
+
 class Res_152(nn.Module):
     def __init__(self, num_classes=1000):
         super(Res_152, self).__init__()
@@ -52,7 +54,7 @@ class Res_152(nn.Module):
         self.layer4 = self.model.layer4
         self.avgpool = self.model.avgpool
         self.fc = self.model.fc
-        
+
     def prediction(self, x, internal=[]):
         x = self.conv1(x)
         x = self.bn1(x)
@@ -85,7 +87,8 @@ class Res_152(nn.Module):
         x = torch.flatten(x, 1)
         x = self.fc(x)
         return x
-    
+
+
 class Inc_v3(nn.Module):
     def __init__(self, num_classes=1000):
         super(Inc_v3, self).__init__()
@@ -113,7 +116,7 @@ class Inc_v3(nn.Module):
         self.avgpool = self.model.avgpool
         self.dropout = self.model.dropout
         self.fc = self.model.fc
-    
+
     def _forward(self, x):
         x = self.Conv2d_1a_3x3(x)
         x = self.Conv2d_2a_3x3(x)
@@ -138,7 +141,7 @@ class Inc_v3(nn.Module):
         x = torch.flatten(x, 1)
         x = self.fc(x)
         return x
-        
+
     def prediction(self, x, internal=[]):
         layers = []
         x = self.Conv2d_1a_3x3(x)
@@ -182,87 +185,89 @@ class Inc_v3(nn.Module):
         x = torch.flatten(x, 1)
         pred = self.fc(x)
         return layers, pred
-    
+
+
 class BasicConv2d(nn.Module):
- 
+
     def __init__(self, in_planes, out_planes, kernel_size, stride, padding=0):
         super(BasicConv2d, self).__init__()
         self.conv = nn.Conv2d(in_planes, out_planes,
                               kernel_size=kernel_size, stride=stride,
-                              padding=padding, bias=False) # verify bias false
+                              padding=padding, bias=False)  # verify bias false
         self.bn = nn.BatchNorm2d(out_planes,
-                                 eps=0.001, # value found in tensorflow
-                                 momentum=0.1, # default pytorch value
+                                 eps=0.001,  # value found in tensorflow
+                                 momentum=0.1,  # default pytorch value
                                  affine=True)
         self.relu = nn.ReLU(inplace=False)
- 
+
     def forward(self, x):
         x = self.conv(x)
         x = self.bn(x)
         x = self.relu(x)
         return x
- 
- 
+
+
 # 标准Inception module
 class Mixed_5b(nn.Module):
- 
+
     def __init__(self):
         super(Mixed_5b, self).__init__()
- 
+
         # branch0: 1*1
         self.branch0 = BasicConv2d(192, 96, kernel_size=1, stride=1)
- 
+
         # branch1: 1*1, 5*5
         self.branch1 = nn.Sequential(
             BasicConv2d(192, 48, kernel_size=1, stride=1),
             BasicConv2d(48, 64, kernel_size=5, stride=1, padding=2)
         )
- 
+
         # branch2: 1*1, 3*3, 3*3
         self.branch2 = nn.Sequential(
             BasicConv2d(192, 64, kernel_size=1, stride=1),
             BasicConv2d(64, 96, kernel_size=3, stride=1, padding=1),
             BasicConv2d(96, 96, kernel_size=3, stride=1, padding=1)
         )
- 
+
         # branch3: avgPool, 1*1
         self.branch3 = nn.Sequential(
             nn.AvgPool2d(3, stride=1, padding=1, count_include_pad=False),
             BasicConv2d(192, 64, kernel_size=1, stride=1)
         )
- 
+
     def forward(self, x):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
-        out = torch.cat((x0, x1, x2, x3), 1)       # 96+64+96+64 = 320
+        out = torch.cat((x0, x1, x2, x3), 1)  # 96+64+96+64 = 320
         return out
- 
+
+
 # figure 16.
 class Block35(nn.Module):
- 
+
     def __init__(self, scale=1.0):
         super(Block35, self).__init__()
- 
+
         self.scale = scale
- 
+
         self.branch0 = BasicConv2d(320, 32, kernel_size=1, stride=1)
- 
+
         self.branch1 = nn.Sequential(
             BasicConv2d(320, 32, kernel_size=1, stride=1),
             BasicConv2d(32, 32, kernel_size=3, stride=1, padding=1)
         )
- 
+
         self.branch2 = nn.Sequential(
             BasicConv2d(320, 32, kernel_size=1, stride=1),
             BasicConv2d(32, 48, kernel_size=3, stride=1, padding=1),
             BasicConv2d(48, 64, kernel_size=3, stride=1, padding=1)
         )
- 
+
         self.conv2d = nn.Conv2d(128, 320, kernel_size=1, stride=1)
         self.relu = nn.ReLU(inplace=False)
- 
+
     def forward(self, x):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
@@ -272,50 +277,50 @@ class Block35(nn.Module):
         out = out * self.scale + x
         out = self.relu(out)
         return out
- 
- 
+
+
 # Reduction-A figure7.
 class Mixed_6a(nn.Module):
- 
+
     def __init__(self):
         super(Mixed_6a, self).__init__()
- 
+
         self.branch0 = BasicConv2d(320, 384, kernel_size=3, stride=2)
- 
+
         self.branch1 = nn.Sequential(
             BasicConv2d(320, 256, kernel_size=1, stride=1),
             BasicConv2d(256, 256, kernel_size=3, stride=1, padding=1),
             BasicConv2d(256, 384, kernel_size=3, stride=2)
         )
- 
+
         self.branch2 = nn.MaxPool2d(3, stride=2)
- 
+
     def forward(self, x):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         out = torch.cat((x0, x1, x2), 1)
         return out
- 
+
 
 class Block17(nn.Module):
- 
+
     def __init__(self, scale=1.0):
         super(Block17, self).__init__()
- 
+
         self.scale = scale
- 
+
         self.branch0 = BasicConv2d(1088, 192, kernel_size=1, stride=1)
- 
+
         self.branch1 = nn.Sequential(
             BasicConv2d(1088, 128, kernel_size=1, stride=1),
             BasicConv2d(128, 160, kernel_size=(1, 7), stride=1, padding=(0, 3)),
             BasicConv2d(160, 192, kernel_size=(7, 1), stride=1, padding=(3, 0))
         )
- 
-        self.conv2d = nn.Conv2d(384, 1088, kernel_size=1, stride=1)     # 论文为1154，此处为1088，这个参数必须与输入的一样
+
+        self.conv2d = nn.Conv2d(384, 1088, kernel_size=1, stride=1)  # 论文为1154，此处为1088，这个参数必须与输入的一样
         self.relu = nn.ReLU(inplace=False)
- 
+
     def forward(self, x):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
@@ -324,32 +329,32 @@ class Block17(nn.Module):
         out = out * self.scale + x
         out = self.relu(out)
         return out
- 
- 
+
+
 # Reduction-B figure 18.
 class Mixed_7a(nn.Module):
- 
+
     def __init__(self):
         super(Mixed_7a, self).__init__()
- 
+
         self.branch0 = nn.Sequential(
             BasicConv2d(1088, 256, kernel_size=1, stride=1),
             BasicConv2d(256, 384, kernel_size=3, stride=2)
         )
- 
+
         self.branch1 = nn.Sequential(
             BasicConv2d(1088, 256, kernel_size=1, stride=1),
             BasicConv2d(256, 288, kernel_size=3, stride=2)
         )
- 
+
         self.branch2 = nn.Sequential(
             BasicConv2d(1088, 256, kernel_size=1, stride=1),
             BasicConv2d(256, 288, kernel_size=3, stride=1, padding=1),
             BasicConv2d(288, 320, kernel_size=3, stride=2)
         )
- 
+
         self.branch3 = nn.MaxPool2d(3, stride=2)
- 
+
     def forward(self, x):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
@@ -357,28 +362,28 @@ class Mixed_7a(nn.Module):
         x3 = self.branch3(x)
         out = torch.cat((x0, x1, x2, x3), 1)
         return out
- 
+
 
 class Block8(nn.Module):
- 
+
     def __init__(self, scale=1.0, noReLU=False):
         super(Block8, self).__init__()
- 
+
         self.scale = scale
         self.noReLU = noReLU
- 
+
         self.branch0 = BasicConv2d(2080, 192, kernel_size=1, stride=1)
- 
+
         self.branch1 = nn.Sequential(
             BasicConv2d(2080, 192, kernel_size=1, stride=1),
             BasicConv2d(192, 224, kernel_size=(1, 3), stride=1, padding=(0, 1)),
             BasicConv2d(224, 256, kernel_size=(3, 1), stride=1, padding=(1, 0))
         )
- 
+
         self.conv2d = nn.Conv2d(448, 2080, kernel_size=1, stride=1)
         if not self.noReLU:
             self.relu = nn.ReLU(inplace=False)
- 
+
     def forward(self, x):
         x0 = self.branch0(x)
         x1 = self.branch1(x)
@@ -388,10 +393,10 @@ class Block8(nn.Module):
         if not self.noReLU:
             out = self.relu(out)
         return out
- 
- 
+
+
 class IncRes_v2(nn.Module):
- 
+
     def __init__(self, num_classes=1000):
         super(IncRes_v2, self).__init__()
         # Special attributs
@@ -463,7 +468,7 @@ class IncRes_v2(nn.Module):
         self.conv2d_7b = BasicConv2d(2080, 1536, kernel_size=1, stride=1)
         self.avgpool_1a = nn.AvgPool2d(8, count_include_pad=False)
         self.last_linear = nn.Linear(1536, num_classes)
- 
+
     def features(self, input):
         layers = []
         x = self.conv2d_1a(input)
@@ -497,18 +502,18 @@ class IncRes_v2(nn.Module):
         x = self.conv2d_7b(x)
         layers.append(x)
         return layers, x
- 
+
     def logits(self, features):
         x = self.avgpool_1a(features)
         x = x.view(x.size(0), -1)
         x = self.last_linear(x)
         return x
- 
+
     def forward(self, input):
         _, x = self.features(input)
         x = self.logits(x)
         return x
-        
+
     def prediction(self, input, internal=[]):
         layers, x = self.features(input)
         x = self.logits(x)

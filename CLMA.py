@@ -22,20 +22,20 @@ ens = 30
 prob = 0.7
 
 # source model and RCLM have the same architecture
-ori_model = Vgg_16()  # Vgg_16, Res_152, Inc_v3, IncRes_v2
-adv_model = Vgg_16()  # Vgg_16, Res_152, Inc_v3, IncRes_v2
+rcl_model = Vgg_16()  # Vgg_16, Res_152, Inc_v3, IncRes_v2
+src_model = Vgg_16()  # Vgg_16, Res_152, Inc_v3, IncRes_v2
 
 # load rclm parameter
-ori_model.load_state_dict(torch.load(rclm))
-ori_model.eval()
-adv_model.eval()
-ori_model.to(device)
-adv_model.to(device)
+rcl_model.load_state_dict(torch.load(rclm))
+rcl_model.eval()
+src_model.eval()
+rcl_model.to(device)
+src_model.to(device)
 
 internal = [i for i in range(29)]
-# initialization
+# instantiate attack
 attack = ComplementaryLabelAttack(
-    attack_model=adv_model, ori_model=ori_model, epsilon=epsilon, step_size=step_size, steps=steps, ens=ens, prob=prob)
+    src_model=src_model, rcl_model=rcl_model, epsilon=epsilon, step_size=step_size, steps=steps, ens=ens, prob=prob)
 
 
 def vgg_normalization(image):
@@ -63,11 +63,9 @@ for images, names, labels in utils.load_image(input_dir, image_size, batch_size)
     images = torch.from_numpy(images)
     images = images.float()
     images = images.to(device)
-    _, pred = ori_model.prediction(images, internal)
+    _, pred = rcl_model.prediction(images, internal)
     cll_pred_labels = torch.argmax(pred, dim=1)
     cll_pred_labels = torch.eye(class_num)[cll_pred_labels, :]
-    labels = labels - 1
-    labels = torch.eye(class_num)[labels, :]
     images = images.to(device)
     cll_pred_labels = cll_pred_labels.to(device)
     labels = labels.to(device)
@@ -82,7 +80,6 @@ for images, names, labels in utils.load_image(input_dir, image_size, batch_size)
                  internal=internal
                  )
     adv_image = adv.cpu().numpy()
-    labels = labels.cpu().numpy()
     adv_image = np.transpose(adv_image, (0, 2, 3, 1))
     # inv_vgg_normalization for for Vgg-16 and Res-152, inv_inception_normalization for inc-v3, inc-res-v2
     adv_image = inv_vgg_normalization(adv_image)

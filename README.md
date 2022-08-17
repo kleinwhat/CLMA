@@ -2,10 +2,11 @@
 
 ## Preface
 
-Since our reverse complementary label model (RCLM) is trained on **PyTorch**,  the parameters of RCLM are saved as .pt file, so our attack experiment is divided into two parts. 
+Since our reverse complementary label model (RCLM) is trained on **PyTorch**,  the parameters of RCLM are saved as `.pt` file, so our attack experiment is divided into three parts. 
 
-- Fist step: With the **PyTorch** environment, save the gradient of internal feature as weights of the CLMA section.
-- Second step: With the **TensorFlow** environment, load the weights of CLMA, combine with the weights of FIA, execute the subsequent attack progress.
+- `First step` :  With the **PyTorch** environment, train a reverse complementary label model (RCLM), save RCLM parameters as `.pt` file.
+- `Second step` :  With the **PyTorch** environment, save the gradient of internal feature as weights of the CLMA section.
+- `Third step` :  With the **TensorFlow** environment, load the weights of CLMA, combine with the weights of FIA, execute the subsequent attack progress.
 
 ## Requirements
 
@@ -31,6 +32,10 @@ Since our reverse complementary label model (RCLM) is trained on **PyTorch**,  t
 
 #### Introduction
 
+- `rclm_train.py` : the code for training reverse complementary label model (RCLM).
+
+- `CLMA.py` : generate CLMA weights for following attack experiment.
+
 - `attack.py` : the implementation for different attacks.
 
 - `verify.py` : the code for evaluating generated adversarial examples on different models.
@@ -38,6 +43,14 @@ Since our reverse complementary label model (RCLM) is trained on **PyTorch**,  t
   You should download the  pretrained models from ( https://github.com/tensorflow/models/tree/master/research/slim,  https://github.com/tensorflow/models/tree/archive/research/adv_imagenet_models) before running the code. Then place these model checkpoint files in `./FIA/models_tf`.
 
 #### Example Usage
+
+##### Train reverse complementary label model (RCLM):
+
+```
+python rclm_train.py
+```
+
+Parameters of RCLM (`.pt`) will be saved in the directory `./rclm`.
 
 ##### Generate and save CLMA weights:
 
@@ -66,7 +79,7 @@ python attack.py --model_name vgg_16 --attack_method PIM --amplification_factor 
 - FIA+CLMA
 
 ```
-python attack.py --model_name vgg_16 --attack_method FIA --layer_name vgg_16/conv4/conv4_3/Relu --ens 30 --probb 0.7 --output_dir ./adv/FIA/ --beta 0.05
+python attack.py --model_name vgg_16 --attack_method FIA --layer_name vgg_16/conv4/conv4_3/Relu --ens 30 --probb 0.7 --output_dir ./adv/FIA+CLMA/ --beta 0.05
 ```
 
 In the TensorFlow environment, our approach CLMA can be combined with FIA only by changing the beta (>0).
@@ -74,6 +87,6 @@ In the TensorFlow environment, our approach CLMA can be combined with FIA only b
 ##### Evaluate the attack success rate
 
 ```
-python verify.py --ori_path ./dataset/images/ --adv_path ./adv/FIA/ --output_file ./log.csv
+python verify.py --ori_path ./dataset/images/ --adv_path ./adv/FIA+CLMA/ --output_file ./log.csv
 ```
 
