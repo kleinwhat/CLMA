@@ -34,6 +34,8 @@ Since our reverse complementary label model (RCLM) is trained on **PyTorch**,  t
 
 - `rclm_train.py` : the code for training reverse complementary label model (RCLM).
 
+  Before training, you need to make sure that you have the corresponding Imagenet training and validation datesets in `./imagenet/train` and `./imagenet/val`.
+
 - `CLMA.py` : generate CLMA weights for following attack experiment.
 
 - `attack.py` : the implementation for different attacks.

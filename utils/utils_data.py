@@ -92,7 +92,7 @@ def prepare_imagenet_data(batch_size, image_size):
         std=[0.229,0.224,0.225])
     ])
     train_datasets = dsets.ImageFolder(
-        "./train",
+        ".imagenet/train",
         transform=data_transforms
     )
     train_dataloaders = torch.utils.data.DataLoader(
@@ -101,7 +101,7 @@ def prepare_imagenet_data(batch_size, image_size):
         num_workers=0,
     )
     test_datasets = dsets.ImageFolder(
-        "./val",
+        ".imagenet/val",
         transform=data_transforms
     )
     test_dataloaders = torch.utils.data.DataLoader(
