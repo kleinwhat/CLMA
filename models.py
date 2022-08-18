@@ -65,8 +65,10 @@ class Res_152(nn.Module):
         layers.append(x)
         x = self.layer2(x)
         layers.append(x)
-        x = self.layer3(x)
-        layers.append(x)
+        for layer_iter in range(len(self.layer3)):
+            x = self.layer3[layer_iter](x)
+            if (layer_iter + 1) % 18 == 0:
+                layers.append(x)
         x = self.layer4(x)
         layers.append(x)
         x = self.avgpool(x)
